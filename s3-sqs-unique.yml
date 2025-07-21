@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Create S3 bucket and SQS queue with unique suffix and set up notification
+Description: Create S3 bucket and SQS queue with unique suffix
 
 Parameters:
   UniqueSuffix:
@@ -7,66 +7,13 @@ Parameters:
     Description: Unique suffix for resource names
 
 Resources:
-
   MyS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "utkarsh-bucket-${UniqueSuffix}"
-      NotificationConfiguration:
-        QueueConfigurations:
-          - Event: "s3:ObjectCreated:*"
-            Queue: !GetAtt MySQSQueue.Arn
 
   MySQSQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub "utkarsh-queue-${UniqueSuffix}"
 
-  BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref MyS3Bucket
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: AllowS3ToSendMessageToSQS
-            Effect: Allow
-            Principal: "*"
-            Action: "sqs:SendMessage"
-            Resource: !GetAtt MySQSQueue.Arn
-            Condition:
-              ArnLike:
-                aws:SourceArn: !Sub "arn:aws:s3:::utkarsh-bucket-${UniqueSuffix}"
-              StringEquals:
-                aws:SourceAccount: !Ref "AWS::AccountId"
-
-  SQSQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      Queues:
-        - !Ref MySQSQueue
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal: "*"
-            Action: "SQS:SendMessage"
-            Resource: !GetAtt MySQSQueue.Arn
-            Condition:
-              ArnLike:
-                aws:SourceArn: !Sub "arn:aws:s3:::utkarsh-bucket-${UniqueSuffix}"
-              StringEquals:
-                aws:SourceAccount: !Ref "AWS::AccountId"
-
-Outputs:
-  BucketName:
-    Value: !Ref MyS3Bucket
-    Description: Name of the created S3 bucket
-
-  QueueURL:
-    Value: !Ref MySQSQueue
-    Description: URL of the created SQS queue
-
-  QueueARN:
-    Value: !GetAtt MySQSQueue.Arn
-    Description: ARN of the created SQS queue
